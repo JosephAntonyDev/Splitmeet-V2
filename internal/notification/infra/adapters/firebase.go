@@ -37,26 +37,14 @@ func NewFirebasePushSender(ctx context.Context) (*FirebasePushSender, error) {
 func (s *FirebasePushSender) SendAndroidPush(ctx context.Context, req core.PushRequest) (bool, error) {
 	msg := &messaging.Message{
 		Token: req.Token,
-		Data:  req.Data,
-		Notification: &messaging.Notification{
-			Title: req.Title,
-			Body:  req.Body,
-		},
+		Data:  req.Data, // data-only: siempre pasa por onMessageReceived()
 		Android: &messaging.AndroidConfig{
 			Priority: "high",
-			Notification: &messaging.AndroidNotification{
-				ChannelID:             "splitmeet_alerts_high",
-				Sound:                 "default",
-				DefaultVibrateTimings: true,
-				DefaultSound:          true,
-				Visibility:            messaging.VisibilityPublic,
-				Priority:              messaging.PriorityMax,
-				Title:                 req.Title,
-				Body:                  req.Body,
-				Tag:                   "splitmeet_notification",
-			},
+			// Sin bloque AndroidNotification: el SDK no muestra nada automáticamente,
+			// así la app construye la notificación con los botones Aceptar/Rechazar.
 		},
 	}
+
 
 	_, err := s.client.Send(ctx, msg)
 	if err != nil {

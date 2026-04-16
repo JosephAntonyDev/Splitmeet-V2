@@ -35,6 +35,30 @@ func NewNotificationService(db *Conn_PostgreSQL, hub *SSEHub, pushSender PushSen
 	return &NotificationService{db: db, hub: hub, pushSender: pushSender, tokenStore: tokenStore}
 }
 
+// buildFCMData construye el mapa Data del FCM incluyendo los campos necesarios
+// para que el NotificationActionReceiver pueda aceptar/rechazar invitaciones
+// directamente desde la barra de notificaciones.
+func buildFCMData(payload NotificationPayload) map[string]string {
+	data := map[string]string{
+		"type":    payload.Type,
+		"user_id": fmt.Sprintf("%d", payload.UserID),
+		"title":   payload.Title,
+		"body":    payload.Message,
+	}
+
+	if payload.ReferenceID != nil {
+		id := fmt.Sprintf("%d", *payload.ReferenceID)
+		switch payload.Type {
+		case "group_invitation":
+			data["groupId"] = id
+		case "outing_invitation":
+			data["outingId"] = id
+		}
+	}
+
+	return data
+}
+
 type NotificationPayload struct {
 	UserID      int64  `json:"user_id"`
 	Type        string `json:"type"`
@@ -105,10 +129,7 @@ func (s *NotificationService) Send(payload NotificationPayload) {
 			Token: token,
 			Title: payload.Title,
 			Body:  payload.Message,
-			Data: map[string]string{
-				"type":    payload.Type,
-				"user_id": fmt.Sprintf("%d", payload.UserID),
-			},
+			Data: buildFCMData(payload),
 		})
 
 		if pushErr != nil {
